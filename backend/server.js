@@ -1,6 +1,8 @@
 import express from "express";
 import cors from "cors";
 import OpenAI from "openai";
+import path from "path";
+import { fileURLToPath } from "url";
 
 const app = express();
 app.use(cors());
@@ -10,10 +12,18 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-app.get("/", (req, res) => {
+// Needed for serving React build
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// === API ROUTES ===
+
+// Health check
+app.get("/api", (req, res) => {
   res.send("AI Voice Assistant Backend is running 🚀");
 });
 
+// Chat endpoint
 app.post("/chat", async (req, res) => {
   try {
     const { message, language } = req.body;
@@ -24,28 +34,11 @@ app.post("/chat", async (req, res) => {
       });
     }
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () =>
-  console.log(`Server running on port ${PORT}`)
-);
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Serve React build folder
-app.use(express.static(path.join(__dirname, "../frontend/build")));
-
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "../frontend/build/index.html"));
-});
-
     const prompts = {
       en: "Reply in English with Indian tone.",
       hi: "हिंदी में उत्तर दें।",
-      ta: "தமிழில் பதிலளிக்கவும்.",
-      ml: "മലയാളത്തിൽ മറുപടി നൽകുക.",
+      ta: "தமிழில் பதிலளிக்கவும்।",
+      ml: "മലയാളത്തിൽ മറുപടി നൽകുക।",
     };
 
     const response = await openai.chat.completions.create({
@@ -58,10 +51,24 @@ app.get("*", (req, res) => {
 
     res.json({ reply: response.choices[0].message.content });
   } catch (err) {
+    console.error(err);
     res.status(500).json({
       reply: "Server error. Please try again later.",
     });
   }
 });
+
+// === Serve React frontend ===
+app.use(express.static(path.join(__dirname, "../frontend/build")));
+
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "../frontend/build/index.html"));
+});
+
+// Start server
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () =>
+  console.log(`Server running on port ${PORT}`)
+);
 
 
